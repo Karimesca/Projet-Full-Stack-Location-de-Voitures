@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 app.route('/cars')
   // GET all cars
   .get((req, res) => {
-    db.query('SELECT * FROM cars', (err, results) => {
+    db.query('SELECT id, brand, model, year, status, img_url, fuel_type, price FROM cars', (err, results) => {
       if (err) return res.status(500).json({ message: 'Server error' });
       res.json(results);
     });
@@ -22,26 +22,25 @@ app.route('/cars')
       brand,
       model,
       year,
-      status,
-      image_url,
+      status = 'available', // Default value
+      img_url,
       fuel_type,
-      price,
-      seats
+      price
     } = req.body;
 
     // Validate required fields
-    if (!brand || !model || !year || !status || !image_url || !fuel_type || !price || !seats) {
-      return res.status(400).json({ message: 'Missing fields' });
+    if (!brand || !model || !year || !fuel_type || !price) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
     const sql = `
-      INSERT INTO cars (brand, model, year, status, image_url, fuel_type, price, seats)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cars (brand, model, year, status, img_url, fuel_type, price)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query(
       sql,
-      [brand, model, year, status, image_url, fuel_type, price, seats],
+      [brand, model, year, status, img_url, fuel_type, price],
       (err, result) => {
         if (err) return res.status(500).json({ message: 'Server error' });
 
@@ -52,17 +51,16 @@ app.route('/cars')
           model,
           year,
           status,
-          image_url,
+          img_url,
           fuel_type,
-          price,
-          seats
+          price
         });
       }
     );
   });
 
 app.route('/cars/:id')
-  // PUT update car
+  // PUT full update
   .put((req, res) => {
     const { id } = req.params;
     const {
@@ -70,43 +68,115 @@ app.route('/cars/:id')
       model,
       year,
       status,
-      image_url,
+      img_url,
       fuel_type,
-      price,
-      seats
+      price
     } = req.body;
 
+    // Validate required fields
+    if (!brand || !model || !year || !fuel_type || !price) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
     const sql = `
-      UPDATE cars SET brand = ?, model = ?, year = ?, status = ?, image_url = ?, fuel_type = ?, price = ?, seats = ?
+      UPDATE cars SET 
+        brand = ?, 
+        model = ?, 
+        year = ?, 
+        status = ?, 
+        img_url = ?, 
+        fuel_type = ?, 
+        price = ?
       WHERE id = ?
     `;
 
     db.query(
       sql,
-      [brand, model, year, status, image_url, fuel_type, price, seats, id],
+      [brand, model, year, status, img_url, fuel_type, price, id],
       (err) => {
         if (err) return res.status(500).json({ message: 'Server error' });
-
-        res.json({
-          message: 'Car updated',
-          id,
-          brand,
-          model,
-          year,
-          status,
-          image_url,
-          fuel_type,
-          price,
-          seats
+        
+        // Verify if any rows were affected
+        db.query('SELECT ROW_COUNT() as affectedRows', (err, result) => {
+          if (err) return res.status(500).json({ message: 'Server error' });
+          
+          if (result[0].affectedRows === 0) {
+            return res.status(404).json({ message: 'Car not found' });
+          }
+          
+          res.json({
+            message: 'Car updated',
+            id,
+            brand,
+            model,
+            year,
+            status,
+            img_url,
+            fuel_type,
+            price
+          });
         });
       }
     );
   })
+  // PATCH partial update
+  .patch((req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Validate at least one field is provided
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    // Prepare fields to update
+    const fields = [];
+    const values = [];
+    const validFields = ['brand', 'model', 'year', 'status', 'img_url', 'fuel_type', 'price'];
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (validFields.includes(key) && value !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(value);
+      }
+    });
+
+    if (fields.length === 0) {
+      return res.status(400).json({ message: 'No valid fields to update' });
+    }
+
+    values.push(id);
+    const sql = `UPDATE cars SET ${fields.join(', ')} WHERE id = ?`;
+
+    db.query(sql, values, (err) => {
+      if (err) return res.status(500).json({ message: 'Server error' });
+      
+      // Verify if any rows were affected
+      db.query('SELECT ROW_COUNT() as affectedRows', (err, result) => {
+        if (err) return res.status(500).json({ message: 'Server error' });
+        
+        if (result[0].affectedRows === 0) {
+          return res.status(404).json({ message: 'Car not found' });
+        }
+        
+        res.json({ 
+          message: 'Car updated',
+          id,
+          ...updates
+        });
+      });
+    });
+  })
   // DELETE car
   .delete((req, res) => {
     const { id } = req.params;
-    db.query('DELETE FROM cars WHERE id = ?', [id], (err) => {
+    db.query('DELETE FROM cars WHERE id = ?', [id], (err, result) => {
       if (err) return res.status(500).json({ message: 'Server error' });
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Car not found' });
+      }
+      
       res.json({ message: 'Car deleted successfully' });
     });
   });
