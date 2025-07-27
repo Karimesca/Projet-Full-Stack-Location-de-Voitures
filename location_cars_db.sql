@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 20, 2025 at 06:15 AM
+-- Generation Time: Jul 27, 2025 at 03:57 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -54,7 +54,7 @@ INSERT INTO `cars` (`id`, `brand`, `model`, `year`, `status`, `img_url`, `fuel_t
 (9, 'Audi', 'A1', 2023, 'available', 'https://www.moteur.ma/media/images/models/audi-a1-274298.png', 'Petrol', 450.00),
 (10, 'Audi', 'A3', 2022, 'available', 'https://www.moteur.ma/media/images/models/audi-a3-662417.png', 'Diesel', 460.00),
 (11, 'Audi', 'A4', 2023, 'available', 'https://www.moteur.ma/media/images/models/audi-a4-324290.png', 'Petrol', 480.00),
-(12, 'Audi', 'A5', 2021, 'available', 'https://www.moteur.ma/media/images/models/audi-a5-627092.png', 'Hybrid', 500.00),
+(12, 'Audi', 'A5', 2021, 'unavailable', 'https://www.moteur.ma/media/images/models/audi-a5-627092.png', 'Hybrid', 500.00),
 (13, 'Hyundai', 'I10', 2022, 'available', 'https://www.moteur.ma/media/images/models/hyundai-i10-834553.png', 'Petrol', 450.00),
 (14, 'Hyundai', 'I20', 2023, 'available', 'https://www.moteur.ma/media/images/models/hyundai-i20-359425.png', 'Diesel', 460.00),
 (15, 'Hyundai', 'Elantra', 2021, 'available', 'https://www.moteur.ma/media/images/models/hyundai-elantra-231573.png', 'Petrol', 470.00),
@@ -62,8 +62,7 @@ INSERT INTO `cars` (`id`, `brand`, `model`, `year`, `status`, `img_url`, `fuel_t
 (17, 'Volkswagen', 'Polo', 2022, 'available', 'https://www.moteur.ma/media/images/models/polo12.png', 'Petrol', 450.00),
 (18, 'Volkswagen', 'Golf', 2023, 'available', 'https://www.moteur.ma/media/images/models/volkswagen-golf_8-244473.png', 'Diesel', 460.00),
 (19, 'Volkswagen', 'Tiguan', 2021, 'available', 'https://www.moteur.ma/media/images/models/volkswagen-tiguan-974353.png', 'Petrol', 480.00),
-(20, 'Volkswagen', 'Touareg', 2022, 'available', 'https://www.moteur.ma/media/images/models/volkswagen-touareg-369520.png', 'Hybrid', 650.00),
-(21, 'a', 'b', 2000, 'unavailable', 'https://www.moteur.ma/media/images/models/volkswagen-amarok-aventura-ravenna-blue.png', 'Petrol', 2000.00);
+(20, 'Volkswagen', 'Touareg', 2022, 'available', 'https://www.moteur.ma/media/images/models/volkswagen-touareg-369520.png', 'Hybrid', 650.00);
 
 -- --------------------------------------------------------
 
@@ -77,7 +76,7 @@ CREATE TABLE `reservations` (
   `car_id` int(11) NOT NULL,
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
-  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `status` enum('pending','confirmed','cancelled','completed','approved','rejected') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -95,6 +94,15 @@ CREATE TABLE `users` (
   `role` enum('client','admin') DEFAULT 'client',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`) VALUES
+(1, 'Admin', 'Admin@ad.min', '$2b$10$kNQ9KSknSOD2KT6paPN7Re17I1S1aryUd2EM/FcjqC6gVEGT4ILqG', 'admin', '2025-07-26 17:57:31'),
+(2, 'karim', 'karimggamee@gmail.com', '$2b$10$nxQ2q.1iA0E6L1r4IMCdZ.g1eFUbH/7WeTEiiZA.gHwMG1wF7LiLe', 'client', '2025-07-26 17:00:53'),
+(63, 'test', 'test@gmail.com', '$2b$10$tqDnIuTQVkBMS99.wOj8NuroAB8yi6zZL8.9ZNRJC2QlxfEzW3n/y', 'client', '2025-07-27 00:03:41');
 
 --
 -- Indexes for dumped tables
@@ -135,13 +143,13 @@ ALTER TABLE `cars`
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- Constraints for dumped tables

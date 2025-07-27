@@ -1,12 +1,74 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { FaCar, FaEdit, FaTrash, FaPlus, FaCheck, FaTimes, FaBars, FaChartLine, FaUsers, FaCog, FaExchangeAlt } from 'react-icons/fa';
+import { FaCar, FaEdit, FaTrash, FaPlus, FaCheck, FaTimes, FaBars, FaChartLine, FaUsers, FaCog, FaExchangeAlt, FaCalendarAlt, FaSun, FaMoon, FaUserCog } from 'react-icons/fa';
+
+// CSS 
+const darkModeStyles = `
+  body.dark-mode {
+    color: #ffffff;
+    background-color: #1a1a1a;
+  }
+
+  body.dark-mode .card {
+    background-color: #343a40;
+    color: #ffffff;
+    border-color: #495057;
+  }
+
+  body.dark-mode .form-control {
+    background-color: #495057;
+    color: #ffffff;
+    border-color: #6c757d;
+  }
+
+  body.dark-mode .form-control:focus {
+    background-color: #495057;
+    color: #ffffff;
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.25rem rgba(130, 138, 145, 0.5);
+  }
+
+  body.dark-mode .table-dark {
+    --bs-table-bg: #343a40;
+    --bs-table-striped-bg: #3e444a;
+    --bs-table-striped-color: #fff;
+    --bs-table-active-bg: #4e555b;
+    --bs-table-active-color: #fff;
+    --bs-table-hover-bg: #43494e;
+    --bs-table-hover-color: #fff;
+    color: #fff;
+    border-color: #4e555b;
+  }
+
+  body.dark-mode .navbar {
+    background-color: #212529 !important;
+  }
+
+  body.dark-mode .sidebar-expanded,
+  body.dark-mode .sidebar-collapsed {
+    background-color: #212529 !important;
+  }
+
+  body.dark-mode .border-bottom {
+    border-color: #495057 !important;
+  }
+
+  body.dark-mode .bg-light {
+    background-color: #343a40 !important;
+  }
+`;
+
+// Inject the styles
+const styleElement = document.createElement('style');
+styleElement.innerHTML = darkModeStyles;
+document.head.appendChild(styleElement);
 
 const AdminDashboard = () => {
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [darkMode, setDarkMode] = useState(false);
 
   // Car management state
   const [cars, setCars] = useState([]);
@@ -20,9 +82,35 @@ const AdminDashboard = () => {
     status: 'available',
     img_url: '',
   });
+
+  // Reservations management state
+  const [reservations, setReservations] = useState([]);
+  const [loadingReservations, setLoadingReservations] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    role: 'user'
+  });
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
+  // Apply dark mode classes to body
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
 
   // Fetch cars from backend
   const fetchCars = async () => {
@@ -38,8 +126,76 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch reservations from backend
+  const fetchReservations = async () => {
+    setLoadingReservations(true);
+    try {
+      const res = await api.get('/reservations');
+      setReservations(res.data);
+    } catch (err) {
+      setError('Error fetching reservations');
+      console.error('Error fetching reservations', err);
+    } finally {
+      setLoadingReservations(false);
+    }
+  };
+
+  // Fetch users
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      setUsers(res.data);
+    } catch (err) {
+      console.error('Error fetching users', err);
+    }
+  };
+
+  // Handle user form input
+  const handleUserChange = (e) => {
+    setUserForm({ ...userForm, [e.target.name]: e.target.value });
+  };
+
+  // Submit user form
+  const handleUserSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingUser) {
+        await api.put(`/users/${editingUser.id}`, userForm);
+        setMessage('User updated successfully');
+      } else {
+        await api.post('/users', userForm);
+        setMessage('User added successfully');
+      }
+      fetchUsers();
+      setUserForm({ name: '', email: '', role: 'user' });
+      setEditingUser(null);
+    } catch (err) {
+      setError('Error saving user');
+      console.error('Error saving user', err);
+    }
+  };
+
+  // Edit user
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserForm({ name: user.name, email: user.email, role: user.role });
+    setActiveTab('manage-users');
+  };
+
+  // Delete user
+  const handleDeleteUser = async (id) => {
+    try {
+      await api.delete(`/users/${id}`);
+      fetchUsers();
+    } catch (err) {
+      console.error('Error deleting user', err);
+    }
+  };
+
   useEffect(() => {
     fetchCars();
+    fetchReservations();
+    fetchUsers();
   }, []);
 
   // Handle form input
@@ -81,7 +237,7 @@ const AdminDashboard = () => {
   const handleEdit = (car) => {
     setEditingCar(car);
     setForm({ ...car });
-    setActiveTab('add-car'); // Switch to add/edit tab
+    setActiveTab('add-car');
   };
 
   // Delete a car
@@ -119,6 +275,26 @@ const AdminDashboard = () => {
     }
   };
 
+  // Update reservation status
+  const updateReservationStatus = async (reservationId, newStatus) => {
+    try {
+      await api.put(`/reservations/${reservationId}`, { status: newStatus });
+      fetchReservations();
+    } catch (err) {
+      console.error('Error updating reservation status', err);
+    }
+  };
+
+  // Delete reservation
+  const handleDeleteReservation = async (id) => {
+    try {
+      await api.delete(`/reservations/${id}`);
+      fetchReservations();
+    } catch (err) {
+      console.error('Error deleting reservation', err);
+    }
+  };
+
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
@@ -126,34 +302,64 @@ const AdminDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'add-car':
-        return <CarFormComponent 
-          form={form} 
-          handleChange={handleChange} 
-          handleSubmit={handleSubmit} 
+        return <CarFormComponent
+          form={form}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
           editingCar={editingCar}
           message={message}
           error={error}
+          darkMode={darkMode}
         />;
       case 'manage-cars':
-        return <CarListComponent 
-          cars={cars} 
-          loading={loading} 
-          handleEdit={handleEdit} 
+        return <CarListComponent
+          cars={cars}
+          loading={loading}
+          handleEdit={handleEdit}
           handleDelete={handleDelete}
           handlePriceUpdate={handlePriceUpdate}
           toggleCarStatus={toggleCarStatus}
+          darkMode={darkMode}
+        />;
+      case 'reservations':
+        return <ReservationsComponent
+          reservations={reservations}
+          cars={cars}
+          users={users}
+          loading={loadingReservations}
+          updateStatus={updateReservationStatus}
+          handleDelete={handleDeleteReservation}
+          darkMode={darkMode}
+        />;
+      case 'manage-users':
+        return <UserManagementComponent
+          users={users}
+          userForm={userForm}
+          handleUserChange={handleUserChange}
+          handleUserSubmit={handleUserSubmit}
+          handleEditUser={handleEditUser}
+          handleDeleteUser={handleDeleteUser}
+          editingUser={editingUser}
+          setEditingUser={setEditingUser}
+          setUserForm={setUserForm}
+          darkMode={darkMode}
         />;
       case 'dashboard':
       default:
-        return <DashboardComponent cars={cars} />;
+        return <DashboardComponent
+          cars={cars}
+          reservations={reservations}
+          users={users}
+          darkMode={darkMode}
+        />;
     }
   };
 
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
+    <div className={`d-flex ${darkMode ? 'dark-mode' : ''}`} style={{ minHeight: '100vh' }}>
       {/* Sidebar */}
-      <div 
-        className={`bg-dark text-white ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}
+      <div
+        className={`${darkMode ? 'bg-dark' : 'bg-dark'} text-white ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}
         style={{
           width: sidebarCollapsed ? '80px' : '250px',
           transition: 'width 0.3s',
@@ -162,7 +368,7 @@ const AdminDashboard = () => {
       >
         <div className="p-3 d-flex justify-content-between align-items-center">
           {!sidebarCollapsed && <h4 className="m-0">Admin Panel</h4>}
-          <button 
+          <button
             className="btn btn-link text-white"
             onClick={toggleSidebar}
           >
@@ -172,7 +378,7 @@ const AdminDashboard = () => {
         <hr className="my-0 bg-secondary" />
         <ul className="nav flex-column p-3">
           <li className="nav-item">
-            <button 
+            <button
               className={`nav-link btn btn-link text-start text-white ${activeTab === 'dashboard' ? 'active bg-primary' : ''}`}
               onClick={() => setActiveTab('dashboard')}
             >
@@ -181,7 +387,7 @@ const AdminDashboard = () => {
             </button>
           </li>
           <li className="nav-item">
-            <button 
+            <button
               className={`nav-link btn btn-link text-start text-white ${activeTab === 'add-car' ? 'active bg-primary' : ''}`}
               onClick={() => {
                 setActiveTab('add-car');
@@ -202,7 +408,7 @@ const AdminDashboard = () => {
             </button>
           </li>
           <li className="nav-item">
-            <button 
+            <button
               className={`nav-link btn btn-link text-start text-white ${activeTab === 'manage-cars' ? 'active bg-primary' : ''}`}
               onClick={() => setActiveTab('manage-cars')}
             >
@@ -210,29 +416,54 @@ const AdminDashboard = () => {
               {!sidebarCollapsed && 'Manage Cars'}
             </button>
           </li>
+          <li className="nav-item">
+            <button
+              className={`nav-link btn btn-link text-start text-white ${activeTab === 'reservations' ? 'active bg-primary' : ''}`}
+              onClick={() => setActiveTab('reservations')}
+            >
+              <FaCalendarAlt className="me-2" />
+              {!sidebarCollapsed && 'Reservations'}
+            </button>
+          </li>
+          <li className="nav-item">
+            <button
+              className={`nav-link btn btn-link text-start text-white ${activeTab === 'manage-users' ? 'active bg-primary' : ''}`}
+              onClick={() => {
+                setActiveTab('manage-users');
+                setEditingUser(null);
+                setUserForm({
+                  name: '',
+                  email: '',
+                  role: 'user'
+                });
+              }}
+            >
+              <FaUserCog className="me-2" />
+              {!sidebarCollapsed && 'Manage Users'}
+            </button>
+          </li>
         </ul>
       </div>
 
       {/* Main Content */}
-      <div className="flex-grow-1 bg-light">
+      <div className="flex-grow-1" style={{ backgroundColor: darkMode ? '#1a1a1a' : '#f8f9fa' }}>
         {/* Top Navigation */}
-        <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <nav className={`navbar navbar-expand-lg ${darkMode ? 'navbar-dark bg-dark' : 'navbar-light bg-white'} shadow-sm`}>
           <div className="container-fluid">
             <span className="navbar-brand">Car Rental Admin</span>
             <div className="d-flex align-items-center">
-              <button className="btn btn-outline-secondary me-3">
-                <FaUsers className="me-1" />
-                Users
-              </button>
-              <button className="btn btn-outline-secondary">
-                <FaCog />
+              <button
+                className="btn btn-outline-secondary me-3"
+                onClick={toggleDarkMode}
+              >
+                {darkMode ? <FaSun /> : <FaMoon />}
               </button>
             </div>
           </div>
         </nav>
 
         {/* Content Area */}
-        <div className="container-fluid py-4">
+        <div className={`container-fluid py-4 ${darkMode ? 'text-white' : ''}`}>
           {renderContent()}
         </div>
       </div>
@@ -240,36 +471,241 @@ const AdminDashboard = () => {
   );
 };
 
-// Dashboard Component
-const DashboardComponent = ({ cars }) => {
+// Dashboard Component with enhanced analytics
+const DashboardComponent = ({ cars, reservations, users, darkMode }) => {
   const availableCars = cars.filter(car => car.status === 'available').length;
   const unavailableCars = cars.filter(car => car.status === 'unavailable').length;
-  
+
+  const reservationStatusCounts = reservations.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const userRolesCount = users.reduce((acc, u) => {
+    acc[u.role] = (acc[u.role] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Calculate revenue from completed reservations
+  const revenue = reservations
+    .filter(r => r.status === 'completed')
+    .reduce((sum, r) => {
+      const car = cars.find(c => c.id === r.car_id);
+      if (car) {
+        const days = (new Date(r.end_date) - new Date(r.start_date)) / (1000 * 60 * 60 * 24);
+        return sum + (car.price * days);
+      }
+      return sum;
+    }, 0);
+
+  // Helper function to get user details by ID
+  const getUserDetails = (userId) => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.name : 'Unknown User';
+  };
+
+  // Helper function to get car details by ID
+  const getCarDetails = (carId) => {
+    const car = cars.find(c => c.id === carId);
+    return car ? `${car.brand} ${car.model}` : 'Unknown Car';
+  };
+
   return (
-    <div>
+    <div className={darkMode ? 'text-white' : ''}>
       <h2>Dashboard Overview</h2>
       <div className="row">
-        <div className="col-md-4 mb-4">
-          <div className="card bg-primary text-white">
+        <div className="col-md-3 mb-4">
+          <div className={`card ${darkMode ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
             <div className="card-body">
               <h5 className="card-title">Total Cars</h5>
               <p className="card-text display-4">{cars.length}</p>
+              <div className="d-flex justify-content-between">
+                <small>Available: {availableCars}</small>
+                <small>Unavailable: {unavailableCars}</small>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-4 mb-4">
-          <div className="card bg-success text-white">
+        <div className="col-md-3 mb-4">
+          <div className={`card ${darkMode ? 'bg-secondary text-white' : 'bg-success text-white'}`}>
             <div className="card-body">
-              <h5 className="card-title">Available Cars</h5>
-              <p className="card-text display-4">{availableCars}</p>
+              <h5 className="card-title">Total Users</h5>
+              <p className="card-text display-4">{users.length}</p>
+              <div className="d-flex justify-content-between">
+                <small>Admins: {userRolesCount.admin || 0}</small>
+                <small>Clients: {userRolesCount.client || 0}</small>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-4 mb-4">
-          <div className="card bg-danger text-white">
+        <div className="col-md-3 mb-4">
+          <div className={`card ${darkMode ? 'bg-secondary text-white' : 'bg-info text-white'}`}>
             <div className="card-body">
-              <h5 className="card-title">Unavailable Cars</h5>
-              <p className="card-text display-4">{unavailableCars}</p>
+              <h5 className="card-title">Reservations</h5>
+              <p className="card-text display-4">{reservations.length}</p>
+              <div className="d-flex justify-content-between">
+                <small>Pending: {reservationStatusCounts.pending || 0}</small>
+                <small>Active: {(reservationStatusCounts.approved || 0) + (reservationStatusCounts.pending || 0)}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3 mb-4">
+          <div className={`card ${darkMode ? 'bg-secondary text-white' : 'bg-warning text-dark'}`}>
+            <div className="card-body">
+              <h5 className="card-title">Total Revenue</h5>
+              <p className="card-text display-4">{revenue.toFixed(2)} DH</p>
+              <small>From {reservationStatusCounts.completed || 0} completed reservations</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-4">
+        <div className="col-md-6 mb-4">
+          <div className={`card ${darkMode ? 'bg-dark' : 'bg-white'} shadow`}>
+            <div className="card-header">
+              <h5>Recent Reservations</h5>
+            </div>
+            <div className="card-body">
+              {reservations.slice(0, 5).map(res => (
+                <div key={res.id} className={`d-flex justify-content-between align-items-center mb-3 p-2 border-bottom ${darkMode ? 'border-secondary' : ''}`}>
+                  <div>
+                    <strong>{getUserDetails(res.user_id)}</strong>
+                    <div className={`small ${darkMode ? 'text-light' : 'text-muted'}`}>{getCarDetails(res.car_id)}</div>
+                  </div>
+                  <span className={`badge ${res.status === 'approved' ? 'bg-success' :
+                      res.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary'
+                    }`}>
+                    {res.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// User Management Component
+const UserManagementComponent = ({
+  users,
+  userForm,
+  handleUserChange,
+  handleUserSubmit,
+  handleEditUser,
+  handleDeleteUser,
+  editingUser,
+  setEditingUser,
+  setUserForm,
+  darkMode
+}) => {
+  return (
+    <div className={darkMode ? 'text-white' : ''}>
+      <h2>User Management</h2>
+      <div className="row">
+        <div className="col-md-4 mb-4">
+          <div className={`card ${darkMode ? 'bg-dark' : ''}`}>
+            <div className="card-body">
+              <h5 className="card-title">{editingUser ? 'Edit User' : 'Add New User'}</h5>
+              <form onSubmit={handleUserSubmit}>
+                <div className="mb-3">
+                  <label className="form-label">Name</label>
+                  <input
+                    name="name"
+                    value={userForm.name}
+                    onChange={handleUserChange}
+                    required
+                    className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    value={userForm.email}
+                    onChange={handleUserChange}
+                    required
+                    className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Role</label>
+                  <select
+                    name="role"
+                    value={userForm.role}
+                    onChange={handleUserChange}
+                    className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
+                  >
+                    <option value="client">client</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <button type="submit" className="btn btn-primary">
+                  {editingUser ? 'Update User' : 'Add User'}
+                </button>
+                {editingUser && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary ms-2"
+                    onClick={() => {
+                      setEditingUser(null);
+                      setUserForm({ name: '', email: '', role: 'Client' });
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </form>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-8">
+          <div className={`card ${darkMode ? 'bg-dark' : ''}`}>
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className={`table ${darkMode ? 'table-dark' : ''}`}>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map(user => (
+                      <tr key={user.id}>
+                        <td>{user.name}</td>
+                        <td>{user.email}</td>
+                        <td>
+                          <span className={`badge ${user.role === 'admin' ? 'bg-danger' : 'bg-primary'
+                            }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-warning btn-sm me-2"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -279,12 +715,12 @@ const DashboardComponent = ({ cars }) => {
 };
 
 // Car Form Component
-const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, message, error }) => (
-  <div>
+const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, message, error, darkMode }) => (
+  <div className={darkMode ? 'text-white' : ''}>
     <h2>{editingCar ? 'Edit Car' : 'Add New Car'}</h2>
     {message && <div className="alert alert-success">{message}</div>}
     {error && <div className="alert alert-danger">{error}</div>}
-    <div className="card">
+    <div className={`card ${darkMode ? 'bg-dark' : ''}`}>
       <div className="card-body">
         <form onSubmit={handleSubmit}>
           <div className="row">
@@ -296,7 +732,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
                   value={form.brand}
                   onChange={handleChange}
                   required
-                  className="form-control"
+                  className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                 />
               </div>
               <div className="mb-3">
@@ -306,7 +742,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
                   value={form.model}
                   onChange={handleChange}
                   required
-                  className="form-control"
+                  className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                 />
               </div>
               <div className="mb-3">
@@ -316,7 +752,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
                   value={form.year}
                   onChange={handleChange}
                   required
-                  className="form-control"
+                  className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                   type="number"
                 />
               </div>
@@ -329,7 +765,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
                   value={form.fuel_type}
                   onChange={handleChange}
                   required
-                  className="form-control"
+                  className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                 />
               </div>
               <div className="mb-3">
@@ -339,7 +775,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
                   value={form.price}
                   onChange={handleChange}
                   required
-                  className="form-control"
+                  className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                   type="number"
                 />
               </div>
@@ -349,7 +785,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
                   name="status"
                   value={form.status}
                   onChange={handleChange}
-                  className="form-control"
+                  className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                 >
                   <option value="available">Available</option>
                   <option value="unavailable">Unavailable</option>
@@ -363,7 +799,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
               name="img_url"
               value={form.img_url}
               onChange={handleChange}
-              className="form-control"
+              className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
             />
           </div>
           {form.img_url && (
@@ -381,7 +817,7 @@ const CarFormComponent = ({ form, handleChange, handleSubmit, editingCar, messag
 );
 
 // Car List Component
-const CarListComponent = ({ cars, loading, handleEdit, handleDelete, handlePriceUpdate, toggleCarStatus }) => {
+const CarListComponent = ({ cars, loading, handleEdit, handleDelete, handlePriceUpdate, toggleCarStatus, darkMode }) => {
   const [editingPriceId, setEditingPriceId] = useState(null);
   const [newPrice, setNewPrice] = useState('');
 
@@ -402,15 +838,15 @@ const CarListComponent = ({ cars, loading, handleEdit, handleDelete, handlePrice
   };
 
   return (
-    <div>
+    <div className={darkMode ? 'text-white' : ''}>
       <h2>Manage Cars</h2>
       {loading ? (
         <div className="alert alert-info">Loading cars...</div>
       ) : (
-        <div className="card">
+        <div className={`card ${darkMode ? 'bg-dark' : ''}`}>
           <div className="card-body">
             <div className="table-responsive">
-              <table className="table table-striped">
+              <table className={`table ${darkMode ? 'table-dark' : ''}`}>
                 <thead>
                   <tr>
                     <th>Brand</th>
@@ -435,17 +871,17 @@ const CarListComponent = ({ cars, loading, handleEdit, handleDelete, handlePrice
                           <div className="input-group" style={{ width: '150px' }}>
                             <input
                               type="number"
-                              className="form-control form-control-sm"
+                              className={`form-control form-control-sm ${darkMode ? 'bg-secondary text-white' : ''}`}
                               value={newPrice}
                               onChange={(e) => setNewPrice(e.target.value)}
                             />
-                            <button 
+                            <button
                               className="btn btn-success btn-sm"
                               onClick={() => savePriceEdit(car.id)}
                             >
                               <FaCheck />
                             </button>
-                            <button 
+                            <button
                               className="btn btn-danger btn-sm"
                               onClick={cancelPriceEdit}
                             >
@@ -454,7 +890,7 @@ const CarListComponent = ({ cars, loading, handleEdit, handleDelete, handlePrice
                           </div>
                         ) : (
                           <div className="d-flex align-items-center">
-                            <button 
+                            <button
                               className="btn btn-link btn-sm p-0 me-2"
                               onClick={() => startPriceEdit(car)}
                               style={{ minWidth: '20px' }}
@@ -466,40 +902,139 @@ const CarListComponent = ({ cars, loading, handleEdit, handleDelete, handlePrice
                         )}
                       </td>
                       <td>
-                        <span className={`badge ${
-                          car.status === 'available' ? 'bg-success' : 'bg-danger'
-                        }`}>
+                        <span className={`badge ${car.status === 'available' ? 'bg-success' : 'bg-danger'
+                          }`}>
                           {car.status}
                         </span>
                       </td>
                       <td>
                         {car.img_url && (
-                          <img 
-                            src={car.img_url} 
-                            alt={`${car.brand} ${car.model}`} 
-                            style={{ width: '50px', height: 'auto' }} 
+                          <img
+                            src={car.img_url}
+                            alt={`${car.brand} ${car.model}`}
+                            style={{ width: '50px', height: 'auto' }}
                           />
                         )}
                       </td>
                       <td>
                         <div className="d-flex flex-wrap gap-2">
-                          <button 
+                          <button
                             className="btn btn-warning btn-sm d-flex align-items-center"
                             onClick={() => handleEdit(car)}
                           >
                             <FaEdit className="me-1" /> Edit
                           </button>
-                          <button 
+                          <button
                             className="btn btn-danger btn-sm d-flex align-items-center"
                             onClick={() => handleDelete(car.id)}
                           >
                             <FaTrash className="me-1" /> Delete
                           </button>
-                          <button 
+                          <button
                             className="btn btn-secondary btn-sm d-flex align-items-center"
                             onClick={() => toggleCarStatus(car.id, car.status)}
                           >
                             <FaExchangeAlt className="me-1" /> Toggle Status
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Reservations Component
+const ReservationsComponent = ({ reservations, cars, users, loading, updateStatus, handleDelete, darkMode }) => {
+  // Helper function to get car details by ID
+  const getCarDetails = (carId) => {
+    const car = cars.find(c => c.id === carId);
+    return car ? `${car.brand} ${car.model} (${car.year})` : 'Car not found';
+  };
+
+  // Helper function to get user details by ID
+  const getUserDetails = (userId) => {
+    const user = users.find(u => u.id === userId);
+    return user ? `${user.name} (${user.email})` : 'User not found';
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  return (
+    <div className={darkMode ? 'text-white' : ''}>
+      <h2>Manage Reservations</h2>
+      {loading ? (
+        <div className="alert alert-info">Loading reservations...</div>
+      ) : (
+        <div className={`card ${darkMode ? 'bg-dark' : ''}`}>
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className={`table ${darkMode ? 'table-dark' : ''}`}>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Car</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reservations.map(reservation => (
+                    <tr key={reservation.id}>
+                      <td>{getUserDetails(reservation.user_id)}</td>
+                      <td>{getCarDetails(reservation.car_id)}</td>
+                      <td>{formatDate(reservation.start_date)}</td>
+                      <td>{formatDate(reservation.end_date)}</td>
+                      <td>
+                        <span className={`badge ${reservation.status === 'approved' ? 'bg-success' :
+                            reservation.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary'
+                          }`}>
+                          {reservation.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex flex-wrap gap-2">
+                          {reservation.status === 'pending' && (
+                            <>
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => updateStatus(reservation.id, 'approved')}
+                              >
+                                <FaCheck /> Confirm
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => updateStatus(reservation.id, 'cancelled')}
+                              >
+                                <FaTimes /> Cancel
+                              </button>
+                            </>
+                          )}
+                          {reservation.status === 'approved' && (
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => updateStatus(reservation.id, 'completed')}
+                            >
+                              Mark Completed
+                            </button>
+                          )}
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDelete(reservation.id)}
+                          >
+                            <FaTrash />
                           </button>
                         </div>
                       </td>

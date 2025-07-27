@@ -1,0 +1,69 @@
+/* src/pages/ReservationForm.css */
+.reservation-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.reservation-card {
+  width: 100%;
+  max-width: 600px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.reservation-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.reservation-header h2 {
+  color: var(--dark-color);
+  font-weight: 600;
+}
+
+.car-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+}
+
+.car-thumbnail {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.reservation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--dark-color);
+}
+
+@media (max-width: 576px) {
+  .car-info {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .reservation-card {
+    padding: 1.5rem;
+  }
+}

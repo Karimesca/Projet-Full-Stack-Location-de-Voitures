@@ -1,0 +1,50 @@
+/* src/pages/EditProfile.css */
+.edit-profile-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 600px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.profile-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.profile-header h2 {
+  font-weight: 700;
+  color: var(--dark-color);
+}
+
+.profile-header .subtitle {
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 576px) {
+  .profile-card {
+    padding: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions button {
+    width: 100%;
+  }
+}

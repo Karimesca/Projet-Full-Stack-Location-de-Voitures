@@ -1,0 +1,119 @@
+/* src/pages/MyReservations.css */
+.my-reservations-container {
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.reservations-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.reservations-header h2 {
+  font-weight: 700;
+  color: var(--dark-color);
+}
+
+.reservations-header .subtitle {
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.reservations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reservation-item {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.reservation-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.reservation-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.reservation-car h5 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.reservation-dates {
+  display: flex;
+  gap: 1.5rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.reservation-status .badge {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 50px;
+}
+
+.reservation-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.no-reservations {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.no-reservations i {
+  color: var(--primary-color);
+}
+
+.no-reservations h4 {
+  margin: 1rem 0;
+  color: var(--dark-color);
+}
+
+.no-reservations p {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--dark-color);
+}
+
+@media (max-width: 768px) {
+  .reservation-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .reservation-dates {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .reservation-actions {
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+}

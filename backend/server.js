@@ -1,7 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const db = require('./data/db');
+const db = require('./data/db'); // Adjust path if needed
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+const SALT_ROUNDS = 10;
+const SECRET_KEY = 'your_secret_key'; // ⚠️ Change this to a secure env variable in production
 
 const app = express();
 app.use(cors());
@@ -9,218 +14,112 @@ app.use(bodyParser.json());
 
 // === CARS ===
 app.route('/cars')
-  // GET all cars
   .get((req, res) => {
-    db.query('SELECT id, brand, model, year, status, img_url, fuel_type, price FROM cars', (err, results) => {
+    db.query('SELECT * FROM cars', (err, results) => {
       if (err) return res.status(500).json({ message: 'Server error' });
       res.json(results);
     });
   })
-  // POST a new car
   .post((req, res) => {
-    const {
-      brand,
-      model,
-      year,
-      status = 'available', // Default value
-      img_url,
-      fuel_type,
-      price
-    } = req.body;
+    const { brand, model, year, fuel_type, price, status = 'available', img_url } = req.body;
 
-    // Validate required fields
     if (!brand || !model || !year || !fuel_type || !price) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const sql = `
-      INSERT INTO cars (brand, model, year, status, img_url, fuel_type, price)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    db.query(
-      sql,
-      [brand, model, year, status, img_url, fuel_type, price],
-      (err, result) => {
-        if (err) return res.status(500).json({ message: 'Server error' });
-
-        res.status(201).json({
-          message: 'Car added successfully',
-          id: result.insertId,
-          brand,
-          model,
-          year,
-          status,
-          img_url,
-          fuel_type,
-          price
-        });
-      }
-    );
+    const sql = `INSERT INTO cars (brand, model, year, fuel_type, price, status, img_url)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.query(sql, [brand, model, year, fuel_type, price, status, img_url], (err, result) => {
+      if (err) return res.status(500).json({ message: 'Server error' });
+      res.status(201).json({ message: 'Car added', id: result.insertId });
+    });
   });
+
+// Get single car by ID
+app.get('/cars/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT * FROM cars WHERE id = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Server error' });
+    if (results.length === 0) return res.status(404).json({ message: 'Car not found' });
+    res.json(results[0]);
+  });
+});
 
 app.route('/cars/:id')
-  // PUT full update
   .put((req, res) => {
     const { id } = req.params;
-    const {
-      brand,
-      model,
-      year,
-      status,
-      img_url,
-      fuel_type,
-      price
-    } = req.body;
+    const { brand, model, year, fuel_type, price, status, img_url } = req.body;
 
-    // Validate required fields
-    if (!brand || !model || !year || !fuel_type || !price) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    const sql = `
-      UPDATE cars SET 
-        brand = ?, 
-        model = ?, 
-        year = ?, 
-        status = ?, 
-        img_url = ?, 
-        fuel_type = ?, 
-        price = ?
-      WHERE id = ?
-    `;
-
-    db.query(
-      sql,
-      [brand, model, year, status, img_url, fuel_type, price, id],
-      (err) => {
-        if (err) return res.status(500).json({ message: 'Server error' });
-        
-        // Verify if any rows were affected
-        db.query('SELECT ROW_COUNT() as affectedRows', (err, result) => {
-          if (err) return res.status(500).json({ message: 'Server error' });
-          
-          if (result[0].affectedRows === 0) {
-            return res.status(404).json({ message: 'Car not found' });
-          }
-          
-          res.json({
-            message: 'Car updated',
-            id,
-            brand,
-            model,
-            year,
-            status,
-            img_url,
-            fuel_type,
-            price
-          });
-        });
-      }
-    );
+    const sql = `UPDATE cars SET brand=?, model=?, year=?, fuel_type=?, price=?, status=?, img_url=? WHERE id=?`;
+    db.query(sql, [brand, model, year, fuel_type, price, status, img_url, id], (err) => {
+      if (err) return res.status(500).json({ message: 'Server error' });
+      res.json({ message: 'Car updated', id });
+    });
   })
-  // PATCH partial update
   .patch((req, res) => {
     const { id } = req.params;
-    const updates = req.body;
+    const fields = Object.entries(req.body);
+    if (!fields.length) return res.status(400).json({ message: 'No fields to update' });
 
-    // Validate at least one field is provided
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ message: 'No fields to update' });
-    }
-
-    // Prepare fields to update
-    const fields = [];
-    const values = [];
-    const validFields = ['brand', 'model', 'year', 'status', 'img_url', 'fuel_type', 'price'];
-
-    Object.entries(updates).forEach(([key, value]) => {
-      if (validFields.includes(key) && value !== undefined) {
-        fields.push(`${key} = ?`);
-        values.push(value);
-      }
-    });
-
-    if (fields.length === 0) {
-      return res.status(400).json({ message: 'No valid fields to update' });
-    }
-
+    const updates = fields.map(([key, _]) => `${key} = ?`).join(', ');
+    const values = fields.map(([_, value]) => value);
     values.push(id);
-    const sql = `UPDATE cars SET ${fields.join(', ')} WHERE id = ?`;
 
-    db.query(sql, values, (err) => {
+    db.query(`UPDATE cars SET ${updates} WHERE id = ?`, values, (err) => {
       if (err) return res.status(500).json({ message: 'Server error' });
-      
-      // Verify if any rows were affected
-      db.query('SELECT ROW_COUNT() as affectedRows', (err, result) => {
-        if (err) return res.status(500).json({ message: 'Server error' });
-        
-        if (result[0].affectedRows === 0) {
-          return res.status(404).json({ message: 'Car not found' });
-        }
-        
-        res.json({ 
-          message: 'Car updated',
-          id,
-          ...updates
-        });
-      });
+      res.json({ message: 'Car updated', id });
     });
   })
-  // DELETE car
   .delete((req, res) => {
     const { id } = req.params;
-    db.query('DELETE FROM cars WHERE id = ?', [id], (err, result) => {
+    db.query('DELETE FROM cars WHERE id = ?', [id], (err) => {
       if (err) return res.status(500).json({ message: 'Server error' });
-      
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'Car not found' });
-      }
-      
-      res.json({ message: 'Car deleted successfully' });
+      res.json({ message: 'Car deleted' });
     });
   });
-
 
 // === USERS ===
 app.route('/users')
-  // GET all users
   .get((req, res) => {
     db.query('SELECT id, name, email, role, created_at FROM users', (err, results) => {
       if (err) return res.status(500).json({ message: 'Server error' });
       res.json(results);
     });
   })
-  // POST create user
-  .post((req, res) => {
-    const { name, email, password, role } = req.body;
+  .post(async (req, res) => {
+    const { name, email, password, role = 'client' } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Missing fields' });
     }
 
-    const sql = 'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)';
-    db.query(sql, [name, email, password, role || 'client'], (err, result) => {
-      if (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(409).json({ message: 'Email already used' });
-        }
-        return res.status(500).json({ message: 'Server error' });
-      }
+    try {
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-      res.status(201).json({
-        message: 'User created',
-        id: result.insertId,
-        name,
-        email,
-        role: role || 'client'
+      const sql = 'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)';
+      db.query(sql, [name, email, hashedPassword, role], (err, result) => {
+        if (err) {
+          if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ message: 'Email already used' });
+          }
+          return res.status(500).json({ message: 'Server error' });
+        }
+
+        res.status(201).json({
+          message: 'User created',
+          id: result.insertId,
+          name,
+          email,
+          role
+        });
       });
-    });
+    } catch (err) {
+      return res.status(500).json({ message: 'Password hashing failed' });
+    }
   });
 
 app.route('/users/:id')
-  // PUT update user
-  .put((req, res) => {
+  .put(async (req, res) => {
     const { id } = req.params;
     const { name, email, password, role } = req.body;
 
@@ -229,7 +128,17 @@ app.route('/users/:id')
 
     if (name) { fields.push('name = ?'); values.push(name); }
     if (email) { fields.push('email = ?'); values.push(email); }
-    if (password) { fields.push('password = ?'); values.push(password); }
+
+    if (password) {
+      try {
+        const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+        fields.push('password = ?');
+        values.push(hashed);
+      } catch (err) {
+        return res.status(500).json({ message: 'Password hashing failed' });
+      }
+    }
+
     if (role) { fields.push('role = ?'); values.push(role); }
 
     if (fields.length === 0) {
@@ -249,88 +158,192 @@ app.route('/users/:id')
 
       res.json({ message: 'User updated', id });
     });
-  })
-  // DELETE user
-  .delete((req, res) => {
-    const { id } = req.params;
-    db.query('DELETE FROM users WHERE id = ?', [id], (err) => {
-      if (err) return res.status(500).json({ message: 'Server error' });
-      res.json({ message: 'User deleted' });
-    });
   });
 
+// User login endpoint
+app.post('/users/login', (req, res) => {
+  const { email, password } = req.body;
+
+  db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
+    if (err) return res.status(500).json({ message: 'Server error' });
+    if (results.length === 0) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const user = results[0];
+
+    // Compare hashed password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    // Remove password before sending
+    delete user.password;
+    res.json({ message: 'Login successful', user });
+  });
+});
+
+// === REGISTRATION ===
+app.post('/register', async (req, res) => {
+    const { name, email, password, role = 'client' } = req.body;
+
+    if (!name || !email || !password) {
+        return res.status(400).json({ message: 'Missing fields' });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        const sql = 'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)';
+        db.query(sql, [name, email, hashedPassword, role], (err, result) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({ message: 'Email already used' });
+                }
+                return res.status(500).json({ message: 'Server error' });
+            }
+
+            res.status(201).json({
+                message: 'User created',
+                id: result.insertId,
+                name,
+                email,
+                role
+            });
+        });
+    } catch (err) {
+        return res.status(500).json({ message: 'Password hashing failed' });
+    }
+});
 
 // === RESERVATIONS ===
 app.route('/reservations')
-  // GET all reservations
   .get((req, res) => {
     const sql = `
-      SELECT r.id, r.user_id, u.name AS user_name, r.car_id, c.brand, c.model, r.start_date, r.end_date, r.status
+      SELECT r.*, u.name AS user_name, c.brand, c.model 
       FROM reservations r
       JOIN users u ON r.user_id = u.id
       JOIN cars c ON r.car_id = c.id
     `;
-
     db.query(sql, (err, results) => {
       if (err) return res.status(500).json({ message: 'Server error' });
       res.json(results);
     });
   })
-  // POST new reservation
-  .post((req, res) => {
+  .post(async (req, res) => {
     const { user_id, car_id, start_date, end_date } = req.body;
 
+    // Validate input
     if (!user_id || !car_id || !start_date || !end_date) {
-        return res.status(400).json({ message: 'Missing fields' });
+      return res.status(400).json({ message: 'Missing required reservation fields' });
     }
 
-    const sql = 'INSERT INTO reservations (user_id, car_id, start_date, end_date, status) VALUES (?, ?, ?, ?, "pending")';
-    
-    db.query(sql, [user_id, car_id, start_date, end_date], (err, result) => {
-        if (err) return res.status(500).json({ message: 'Server error' });
+    try {
+      // Check car availability
+      const [car] = await db.promise().query('SELECT status FROM cars WHERE id = ?', [car_id]);
+      if (!car.length) return res.status(404).json({ message: 'Car not found' });
+      if (car[0].status !== 'available') {
+        return res.status(400).json({ message: 'Car is not available for reservation' });
+      }
 
-        res.status(201).json({
-            message: 'Reservation created successfully',
-            id: result.insertId,
-            user_id,
-            car_id,
-            start_date,
-            end_date,
-            status: 'pending'
-        });
-    });
-});
+      // Create reservation
+      const sql = `INSERT INTO reservations (user_id, car_id, start_date, end_date, status)
+                   VALUES (?, ?, ?, ?, 'pending')`;
+      const [result] = await db.promise().query(sql, [user_id, car_id, start_date, end_date]);
 
+      // Update car status
+      await db.promise().query('UPDATE cars SET status = "unavailable" WHERE id = ?', [car_id]);
 
+      res.status(201).json({
+        message: 'Reservation created successfully',
+        reservationId: result.insertId
+      });
+    } catch (err) {
+      console.error('Reservation error:', err);
+      res.status(500).json({
+        message: 'Failed to create reservation',
+        error: err.message
+      });
+    }
+  });
 
 app.route('/reservations/:id')
-  // PUT update reservation status (approve/reject)
   .put((req, res) => {
     const { id } = req.params;
     const { status } = req.body;
+    const validStatuses = ['pending', 'approved', 'rejected', 'completed', 'cancelled'];
 
-    if (!['approved', 'rejected'].includes(status)) {
+    if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
     const sql = 'UPDATE reservations SET status = ? WHERE id = ?';
     db.query(sql, [status, id], (err) => {
       if (err) return res.status(500).json({ message: 'Server error' });
-
-      res.json({ message: `Reservation ${status}`, id });
+      res.json({ message: `Reservation ${status}` });
     });
   })
-  // DELETE reservation
   .delete((req, res) => {
     const { id } = req.params;
     db.query('DELETE FROM reservations WHERE id = ?', [id], (err) => {
       if (err) return res.status(500).json({ message: 'Server error' });
-      res.json({ message: 'Reservation deleted successfully' });
+      res.json({ message: 'Reservation deleted' });
     });
   });
 
-// === Start Server ===
+// === AUTHENTICATION ===
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) return res.status(400).json({ message: 'Missing fields' });
+
+  const sql = 'SELECT * FROM users WHERE email = ?';
+  db.query(sql, [email], async (err, results) => {
+    if (err) return res.status(500).json({ message: 'Server error' });
+    if (results.length === 0) return res.status(401).json({ message: 'Invalid email or password' });
+
+    const user = results[0];
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid email or password' });
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      SECRET_KEY,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  });
+});
+
+// Middleware to protect routes
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Format: Bearer TOKEN
+
+  if (!token) return res.status(401).json({ message: 'Token missing' });
+
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user; // attach user data to request
+    next();
+  });
+}
+
+app.get('/secure-data', authenticateToken, (req, res) => {
+  res.json({ message: 'Secure info', user: req.user });
+});
+
+// === START SERVER ===
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

@@ -1,0 +1,49 @@
+/* src/pages/HomePage.css */
+.home-page {
+  padding-bottom: 3rem;
+}
+
+.hero-section {
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+              url('/car-rental-hero.jpg') no-repeat center center;
+  background-size: cover;
+  color: white;
+  padding: 6rem 1rem;
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-content h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.hero-content .lead {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 4rem 1rem;
+  }
+  
+  .hero-content h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero-content .lead {
+    font-size: 1.25rem;
+  }
+}
