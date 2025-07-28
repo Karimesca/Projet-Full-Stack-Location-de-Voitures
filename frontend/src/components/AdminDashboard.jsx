@@ -3,6 +3,7 @@ import api from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FaCar, FaEdit, FaTrash, FaPlus, FaCheck, FaTimes, FaBars, FaChartLine, FaUsers, FaCog, FaExchangeAlt, FaCalendarAlt, FaSun, FaMoon, FaUserCog, FaEye, FaEyeSlash } from 'react-icons/fa';
 import './AdminDashboard.css'
+import { PieChart } from '@mui/x-charts/PieChart';
 // Enhanced CSS with better dark mode
 const enhancedStyles = `
   body.dark-mode {
@@ -536,17 +537,13 @@ const AdminDashboard = () => {
 };
 
 // Dashboard Component with enhanced analytics
+// Dashboard Component with enhanced analytics
 const DashboardComponent = ({ cars, reservations, users, darkMode }) => {
   const availableCars = cars.filter(car => car.status === 'available').length;
   const unavailableCars = cars.filter(car => car.status === 'unavailable').length;
 
   const reservationStatusCounts = reservations.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1;
-    return acc;
-  }, {});
-
-  const userRolesCount = users.reduce((acc, u) => {
-    acc[u.role] = (acc[u.role] || 0) + 1;
     return acc;
   }, {});
 
@@ -562,13 +559,24 @@ const DashboardComponent = ({ cars, reservations, users, darkMode }) => {
       return sum;
     }, 0);
 
-  // Helper function to get user details by ID
+  // Data for charts
+  const carStatusData = [
+    { id: 0, value: availableCars, label: 'Available' },
+    { id: 1, value: unavailableCars, label: 'Unavailable' },
+  ];
+
+  const reservationStatusData = Object.entries(reservationStatusCounts).map(([status, count], index) => ({
+    id: index,
+    value: count,
+    label: status.charAt(0).toUpperCase() + status.slice(1),
+  }));
+
+  // Helper functions
   const getUserDetails = (userId) => {
     const user = users.find(u => u.id === userId);
     return user ? user.name : 'Unknown User';
   };
 
-  // Helper function to get car details by ID
   const getCarDetails = (carId) => {
     const car = cars.find(c => c.id === carId);
     return car ? `${car.brand} ${car.model}` : 'Unknown Car';
@@ -595,10 +603,7 @@ const DashboardComponent = ({ cars, reservations, users, darkMode }) => {
             <div className="card-body">
               <h5 className="card-title">Total Users</h5>
               <p className="card-text display-4">{users.length}</p>
-              <div className="d-flex justify-content-between">
-                <small>Admins: {userRolesCount.admin || 0}</small>
-                <small>Clients: {userRolesCount.client || 0}</small>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -607,10 +612,6 @@ const DashboardComponent = ({ cars, reservations, users, darkMode }) => {
             <div className="card-body">
               <h5 className="card-title">Reservations</h5>
               <p className="card-text display-4">{reservations.length}</p>
-              <div className="d-flex justify-content-between">
-                <small>Pending: {reservationStatusCounts.pending || 0}</small>
-                <small>Active: {(reservationStatusCounts.approved || 0) + (reservationStatusCounts.pending || 0)}</small>
-              </div>
             </div>
           </div>
         </div>
@@ -619,14 +620,80 @@ const DashboardComponent = ({ cars, reservations, users, darkMode }) => {
             <div className="card-body">
               <h5 className="card-title">Total Revenue</h5>
               <p className="card-text display-4">{revenue.toFixed(2)} DH</p>
-              <small>From {reservationStatusCounts.completed || 0} completed reservations</small>
             </div>
           </div>
         </div>
       </div>
 
       <div className="row mt-4">
+        {/* Car Status Donut Chart */}
         <div className="col-md-6 mb-4">
+          <div className={`card ${darkMode ? 'bg-dark' : 'bg-white'} shadow`}>
+            <div className="card-header">
+              <h5>Car Status Distribution</h5>
+            </div>
+            <div className="card-body" style={{ height: '400px' }}>
+              <PieChart
+                series={[
+                  {
+                    data: carStatusData,
+                    innerRadius: 40, // This creates the donut effect
+                    outerRadius: 100,
+                    paddingAngle: 5,
+                    cornerRadius: 5,
+                    highlightScope: { faded: 'global', highlighted: 'item' },
+                    faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+                  },
+                ]}
+                colors={['#28a745', '#dc3545']}
+                slotProps={{
+                  legend: {
+                    labelStyle: {
+                      fill: darkMode ? '#fff' : '#000',
+                    },
+                    position: { vertical: 'middle', horizontal: 'right' },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Reservation Status Pie Chart */}
+        <div className="col-md-6 mb-4">
+          <div className={`card ${darkMode ? 'bg-dark' : 'bg-white'} shadow`}>
+            <div className="card-header">
+              <h5>Reservation Status</h5>
+            </div>
+            <div className="card-body" style={{ height: '400px' }}>
+              <PieChart
+                series={[
+                  {
+                    data: reservationStatusData,
+                    outerRadius: 100,
+                    paddingAngle: 5,
+                    cornerRadius: 5,
+                    highlightScope: { faded: 'global', highlighted: 'item' },
+                    faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+                  },
+                ]}
+                colors={['#ffc107', '#28a745', '#6c757d', '#dc3545']}
+                slotProps={{
+                  legend: {
+                    labelStyle: {
+                      fill: darkMode ? '#fff' : '#000',
+                    },
+                    position: { vertical: 'middle', horizontal: 'right' },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-4">
+        <div className="col-md-12 mb-4">
           <div className={`card ${darkMode ? 'bg-dark' : 'bg-white'} shadow`}>
             <div className="card-header">
               <h5>Recent Reservations</h5>
