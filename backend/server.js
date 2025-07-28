@@ -4,9 +4,10 @@ const cors = require('cors');
 const db = require('./data/db'); // Adjust path if needed
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const SALT_ROUNDS = 10;
-const SECRET_KEY = 'your_secret_key'; // ⚠️ Change this to a secure env variable in production
+const SECRET_KEY = process.env.JWT_SECRET || 'your_secret_key';
 
 const app = express();
 app.use(cors());
@@ -118,6 +119,16 @@ app.route('/users')
     }
   });
 
+// Get single user by ID
+app.get('/users/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT id, name, email, role FROM users WHERE id = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Server error' });
+    if (results.length === 0) return res.status(404).json({ message: 'User not found' });
+    res.json(results[0]);
+  });
+});
+
 app.route('/users/:id')
   .put(async (req, res) => {
     const { id } = req.params;
@@ -214,7 +225,7 @@ app.post('/register', async (req, res) => {
 
 // === RESERVATIONS ===
 app.route('/reservations')
-  .get((req, res) => {
+  .get(authenticateToken, (req, res) => {
     const sql = `
       SELECT r.*, u.name AS user_name, c.brand, c.model 
       FROM reservations r
@@ -226,39 +237,53 @@ app.route('/reservations')
       res.json(results);
     });
   })
-  .post(async (req, res) => {
+  .post(authenticateToken, async (req, res) => {
     const { user_id, car_id, start_date, end_date } = req.body;
 
-    // Validate input
+    // Verify the authenticated user matches the reservation user
+    if (req.user.id != user_id) {
+      return res.status(403).json({ message: 'Unauthorized user' });
+    }
+
+    // Input validation
     if (!user_id || !car_id || !start_date || !end_date) {
-      return res.status(400).json({ message: 'Missing required reservation fields' });
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
     try {
-      // Check car availability
-      const [car] = await db.promise().query('SELECT status FROM cars WHERE id = ?', [car_id]);
+      // Check car exists and is available
+      const [car] = await db.promise().query(
+        'SELECT status FROM cars WHERE id = ? FOR UPDATE', 
+        [car_id]
+      );
+      
       if (!car.length) return res.status(404).json({ message: 'Car not found' });
       if (car[0].status !== 'available') {
-        return res.status(400).json({ message: 'Car is not available for reservation' });
+        return res.status(400).json({ message: 'Car is not available' });
       }
 
       // Create reservation
-      const sql = `INSERT INTO reservations (user_id, car_id, start_date, end_date, status)
-                   VALUES (?, ?, ?, ?, 'pending')`;
-      const [result] = await db.promise().query(sql, [user_id, car_id, start_date, end_date]);
+      const [result] = await db.promise().query(
+        `INSERT INTO reservations (user_id, car_id, start_date, end_date, status)
+         VALUES (?, ?, ?, ?, 'pending')`,
+        [user_id, car_id, start_date, end_date]
+      );
 
       // Update car status
-      await db.promise().query('UPDATE cars SET status = "unavailable" WHERE id = ?', [car_id]);
+      await db.promise().query(
+        'UPDATE cars SET status = "unavailable" WHERE id = ?',
+        [car_id]
+      );
 
-      res.status(201).json({
-        message: 'Reservation created successfully',
-        reservationId: result.insertId
+      res.status(201).json({ 
+        message: 'Reservation created',
+        id: result.insertId 
       });
     } catch (err) {
-      console.error('Reservation error:', err);
-      res.status(500).json({
-        message: 'Failed to create reservation',
-        error: err.message
+      console.error(err);
+      res.status(500).json({ 
+        message: 'Database error',
+        error: err.message 
       });
     }
   });
@@ -343,7 +368,7 @@ app.get('/secure-data', authenticateToken, (req, res) => {
 });
 
 // === START SERVER ===
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

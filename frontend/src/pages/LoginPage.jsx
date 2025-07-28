@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './LoginPage.css';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(''); // Added this line to define error state
-  const [loading, setLoading] = useState(false); // Optional: for loading state
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,20 +18,20 @@ const LoginPage = () => {
 
     try {
       const response = await api.post('/login', { email, password });
+      
+      // Store all authentication data
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user_id', response.data.user.id);
+      localStorage.setItem('user_role', response.data.user.role);
+      localStorage.setItem('name', response.data.user.name);
 
-      // Save user data to localStorage
-      localStorage.setItem('user_id', response.data.id);
-      localStorage.setItem('user_role', response.data.role);
-      localStorage.setItem('user_name', response.data.name);
-
-      // Redirect based on role
-      if (response.data.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/cars');
-      }
+      // Redirect to intended page or default based on role
+      const from = location.state?.from?.pathname || 
+                  (response.data.user.role === 'admin' ? '/admin' : '/cars');
+      navigate(from, { replace: true });
+      
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
       console.error('Login error:', err);
     } finally {
       setLoading(false);
@@ -84,7 +85,7 @@ const LoginPage = () => {
           >
             {loading ? (
               <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
                 Signing In...
               </>
             ) : (

@@ -7,12 +7,13 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [name, setName] = useState(localStorage.getItem('name') || 'User');
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get user info from localStorage
   const userId = localStorage.getItem('user_id');
   const role = localStorage.getItem('user_role');
+  const token = localStorage.getItem('token');
 
-  // Add the missing toggleNavbar function
   const toggleNavbar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -28,28 +29,38 @@ const Navbar = () => {
   // Fetch user name from API if logged in
   useEffect(() => {
     const fetchUserName = async () => {
-      if (!userId || userId === 'undefined' || userId === 'null') {
+      if (!userId || !token) {
+        setName('User');
         return;
       }
 
+      // If name exists in localStorage, use it
+      const storedName = localStorage.getItem('name');
+      if (storedName) {
+        setName(storedName);
+        return;
+      }
+
+      setIsLoading(true);
       try {
         const response = await getUserById(userId);
-        if (response.data && response.data.name) {
+        if (response.data?.name) {
           setName(response.data.name);
           localStorage.setItem('name', response.data.name);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        if (!localStorage.getItem('name')) {
-          setName('User');
-        }
+        setName('User');
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (!localStorage.getItem('name')) {
-      fetchUserName();
-    }
-  }, [userId]);
+    fetchUserName();
+  }, [userId, token]);
+
+  // Display loading state or fallback if name isn't loaded yet
+  const displayName = isLoading ? 'Loading...' : name;
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary px-4">
@@ -115,12 +126,12 @@ const Navbar = () => {
                   aria-expanded="false"
                 >
                   <i className="fas fa-user-circle me-2"></i>
-                  {name}
+                  {displayName}
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end">
                   <li>
                     <span className="dropdown-item-text fw-bold">
-                      <i className="fas fa-user me-2"></i>{name}
+                      <i className="fas fa-user me-2"></i>{displayName}
                     </span>
                   </li>
                   <li>

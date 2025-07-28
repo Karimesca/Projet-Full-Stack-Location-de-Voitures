@@ -1,6 +1,8 @@
+// src/services/api.js
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000';
+// For development, use localhost. For production, replace with your actual API URL
+const API_BASE_URL = 'http://localhost:3000'; 
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -48,10 +50,7 @@ export const deleteUser = (id) => api.delete(`/users/${id}`);
 
 // === Reservations Endpoints ===
 export const getReservations = () => api.get('/reservations');
-export const createReservation = (reservationData, token) => {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  return api.post('/reservations', reservationData, { headers });
-};
+export const createReservation = (reservationData) => api.post('/reservations', reservationData); // Updated to remove manual token handling
 export const updateReservation = (id, reservationData) => api.put(`/reservations/${id}`, reservationData);
 export const deleteReservation = (id) => api.delete(`/reservations/${id}`);
 

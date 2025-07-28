@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 27, 2025 at 03:57 PM
+-- Generation Time: Jul 28, 2025 at 10:43 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -54,7 +54,7 @@ INSERT INTO `cars` (`id`, `brand`, `model`, `year`, `status`, `img_url`, `fuel_t
 (9, 'Audi', 'A1', 2023, 'available', 'https://www.moteur.ma/media/images/models/audi-a1-274298.png', 'Petrol', 450.00),
 (10, 'Audi', 'A3', 2022, 'available', 'https://www.moteur.ma/media/images/models/audi-a3-662417.png', 'Diesel', 460.00),
 (11, 'Audi', 'A4', 2023, 'available', 'https://www.moteur.ma/media/images/models/audi-a4-324290.png', 'Petrol', 480.00),
-(12, 'Audi', 'A5', 2021, 'unavailable', 'https://www.moteur.ma/media/images/models/audi-a5-627092.png', 'Hybrid', 500.00),
+(12, 'Audi', 'A5', 2021, 'available', 'https://www.moteur.ma/media/images/models/audi-a5-627092.png', 'Hybrid', 500.00),
 (13, 'Hyundai', 'I10', 2022, 'available', 'https://www.moteur.ma/media/images/models/hyundai-i10-834553.png', 'Petrol', 450.00),
 (14, 'Hyundai', 'I20', 2023, 'available', 'https://www.moteur.ma/media/images/models/hyundai-i20-359425.png', 'Diesel', 460.00),
 (15, 'Hyundai', 'Elantra', 2021, 'available', 'https://www.moteur.ma/media/images/models/hyundai-elantra-231573.png', 'Petrol', 470.00),
@@ -80,6 +80,13 @@ CREATE TABLE `reservations` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `reservations`
+--
+
+INSERT INTO `reservations` (`id`, `user_id`, `car_id`, `start_date`, `end_date`, `status`, `created_at`) VALUES
+(20, 2, 1, '2025-07-28', '2025-07-31', 'cancelled', '2025-07-28 08:10:01');
+
 -- --------------------------------------------------------
 
 --
@@ -100,9 +107,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`) VALUES
-(1, 'Admin', 'Admin@ad.min', '$2b$10$kNQ9KSknSOD2KT6paPN7Re17I1S1aryUd2EM/FcjqC6gVEGT4ILqG', 'admin', '2025-07-26 17:57:31'),
-(2, 'karim', 'karimggamee@gmail.com', '$2b$10$nxQ2q.1iA0E6L1r4IMCdZ.g1eFUbH/7WeTEiiZA.gHwMG1wF7LiLe', 'client', '2025-07-26 17:00:53'),
-(63, 'test', 'test@gmail.com', '$2b$10$tqDnIuTQVkBMS99.wOj8NuroAB8yi6zZL8.9ZNRJC2QlxfEzW3n/y', 'client', '2025-07-27 00:03:41');
+(1, 'Admin', 'Admin@ad.min', '$2b$10$G8sLhvLw/bJWZZPGbC7efO1UysdwWsSOmgpPRBpBHIc2yM5Arb2dS', 'admin', '2025-07-28 07:17:12'),
+(2, 'karim 1', 'karimggamee@gmail.com', '$2b$10$nxQ2q.1iA0E6L1r4IMCdZ.g1eFUbH/7WeTEiiZA.gHwMG1wF7LiLe', 'client', '2025-07-26 17:00:53'),
+(3, 'test', 'test@gmail.com', '$2b$10$tqDnIuTQVkBMS99.wOj8NuroAB8yi6zZL8.9ZNRJC2QlxfEzW3n/y', 'client', '2025-07-27 00:03:41');
 
 --
 -- Indexes for dumped tables
@@ -143,13 +150,13 @@ ALTER TABLE `cars`
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- Constraints for dumped tables

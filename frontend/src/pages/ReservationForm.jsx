@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createReservation } from '../services/api';
+import api from '../services/api';  // This is the crucial missing import
+import { createReservation } from '../services/api';  // Keep if used elsewhere
 import './ReservationForm.css';
 
 const ReservationForm = () => {
@@ -75,13 +76,10 @@ const ReservationForm = () => {
         car_id: parseInt(carId),
         start_date: startDate,
         end_date: endDate
-      }, token);
+      });
 
       setMessage('Reservation created successfully!');
-      
-      // Update local car status immediately
       setCar(prev => ({ ...prev, status: 'unavailable' }));
-      
       setTimeout(() => navigate('/my-reservations'), 2000);
     } catch (err) {
       console.error('Reservation error:', err);
@@ -93,16 +91,13 @@ const ReservationForm = () => {
         } else if (err.response.status === 401) {
           errorMsg = 'Session expired. Please login again.';
           navigate('/login', { state: { from: `/cars/${carId}/reserve` } });
-        } else if (err.response.status === 404) {
-          errorMsg = err.response.data.message || 'Car or user not found';
-        } else if (err.response.data.sqlError) {
-          errorMsg = 'Database error occurred';
+        } else if (err.response.status === 403) {
+          errorMsg = 'Unauthorized action';
         }
       }
       
       setError(errorMsg);
       
-      // Refresh car data if there was a conflict
       if (err.response?.status === 400 && err.response.data.message.includes('available')) {
         const res = await api.get(`/cars/${carId}`);
         setCar(res.data);

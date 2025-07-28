@@ -1,0 +1,3 @@
+Admin 
+Email: Admin@ad.min
+pass: admin123

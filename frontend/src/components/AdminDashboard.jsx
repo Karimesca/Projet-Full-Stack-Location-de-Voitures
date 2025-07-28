@@ -1,67 +1,108 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { FaCar, FaEdit, FaTrash, FaPlus, FaCheck, FaTimes, FaBars, FaChartLine, FaUsers, FaCog, FaExchangeAlt, FaCalendarAlt, FaSun, FaMoon, FaUserCog } from 'react-icons/fa';
-
-// CSS 
-const darkModeStyles = `
+import { FaCar, FaEdit, FaTrash, FaPlus, FaCheck, FaTimes, FaBars, FaChartLine, FaUsers, FaCog, FaExchangeAlt, FaCalendarAlt, FaSun, FaMoon, FaUserCog, FaEye, FaEyeSlash } from 'react-icons/fa';
+import './AdminDashboard.css'
+// Enhanced CSS with better dark mode
+const enhancedStyles = `
   body.dark-mode {
-    color: #ffffff;
-    background-color: #1a1a1a;
+    color: #f8f9fa;
+    background-color: #121212;
   }
 
   body.dark-mode .card {
-    background-color: #343a40;
-    color: #ffffff;
-    border-color: #495057;
+    background-color: #1e1e1e;
+    color: #f8f9fa;
+    border-color: #2d2d2d;
   }
 
   body.dark-mode .form-control {
-    background-color: #495057;
-    color: #ffffff;
-    border-color: #6c757d;
+    background-color: #2d2d2d;
+    color: #f8f9fa;
+    border-color: #3d3d3d;
   }
 
   body.dark-mode .form-control:focus {
-    background-color: #495057;
-    color: #ffffff;
-    border-color: #6c757d;
-    box-shadow: 0 0 0 0.25rem rgba(130, 138, 145, 0.5);
+    background-color: #2d2d2d;
+    color: #f8f9fa;
+    border-color: #4d4d4d;
+    box-shadow: 0 0 0 0.25rem rgba(100, 100, 100, 0.25);
   }
 
   body.dark-mode .table-dark {
-    --bs-table-bg: #343a40;
-    --bs-table-striped-bg: #3e444a;
-    --bs-table-striped-color: #fff;
-    --bs-table-active-bg: #4e555b;
-    --bs-table-active-color: #fff;
-    --bs-table-hover-bg: #43494e;
-    --bs-table-hover-color: #fff;
-    color: #fff;
-    border-color: #4e555b;
+    --bs-table-bg: #1e1e1e;
+    --bs-table-striped-bg: #252525;
+    --bs-table-striped-color: #f8f9fa;
+    --bs-table-active-bg: #353535;
+    --bs-table-active-color: #f8f9fa;
+    --bs-table-hover-bg: #2a2a2a;
+    --bs-table-hover-color: #f8f9fa;
+    color: #f8f9fa;
+    border-color: #3d3d3d;
   }
 
   body.dark-mode .navbar {
-    background-color: #212529 !important;
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid #2d2d2d !important;
   }
 
-  body.dark-mode .sidebar-expanded,
-  body.dark-mode .sidebar-collapsed {
-    background-color: #212529 !important;
+  body.dark-mode .sidebar {
+    background-color: #1a1a1a !important;
+    border-right: 1px solid #2d2d2d !important;
   }
 
-  body.dark-mode .border-bottom {
-    border-color: #495057 !important;
+  body.dark-mode .sidebar .nav-link {
+    color: #d1d1d1 !important;
   }
 
-  body.dark-mode .bg-light {
-    background-color: #343a40 !important;
+  body.dark-mode .sidebar .nav-link:hover {
+    background-color: #2a2a2a !important;
+  }
+
+  body.dark-mode .sidebar .nav-link.active {
+    background-color: #3a3a3a !important;
+    color: white !important;
+  }
+
+  body.dark-mode .badge {
+    color: white !important;
+  }
+
+  /* Password input group */
+  .password-input-group {
+    position: relative;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    z-index: 5;
+    color: #6c757d;
+  }
+
+  /* Loading spinner */
+  .loading-spinner {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    vertical-align: text-bottom;
+    border: 0.25em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+  }
+
+  @keyframes spinner-border {
+    to { transform: rotate(360deg); }
   }
 `;
 
 // Inject the styles
 const styleElement = document.createElement('style');
-styleElement.innerHTML = darkModeStyles;
+styleElement.innerHTML = enhancedStyles;
 document.head.appendChild(styleElement);
 
 const AdminDashboard = () => {
@@ -91,7 +132,8 @@ const AdminDashboard = () => {
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
-    role: 'user'
+    role: 'user',
+    password: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -155,22 +197,43 @@ const AdminDashboard = () => {
     setUserForm({ ...userForm, [e.target.name]: e.target.value });
   };
 
-  // Submit user form
+  // Submit user form with password validation
   const handleUserSubmit = async (e) => {
     e.preventDefault();
+    setMessage('');
+    setError('');
+    
+    // Password validation
+    if (!editingUser && (!userForm.password || userForm.password.length < 6)) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     try {
+      const userData = { 
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role
+      };
+
+      // Only include password if it's not empty (for edits) or if creating new user
+      if (userForm.password) {
+        userData.password = userForm.password;
+      }
+
       if (editingUser) {
-        await api.put(`/users/${editingUser.id}`, userForm);
+        await api.put(`/users/${editingUser.id}`, userData);
         setMessage('User updated successfully');
       } else {
-        await api.post('/users', userForm);
-        setMessage('User added successfully');
+        await api.post('/users', userData);
+        setMessage('User created successfully');
       }
+      
       fetchUsers();
-      setUserForm({ name: '', email: '', role: 'user' });
+      setUserForm({ name: '', email: '', role: 'client', password: '' });
       setEditingUser(null);
     } catch (err) {
-      setError('Error saving user');
+      setError(err.response?.data?.message || 'Error saving user');
       console.error('Error saving user', err);
     }
   };
@@ -178,7 +241,7 @@ const AdminDashboard = () => {
   // Edit user
   const handleEditUser = (user) => {
     setEditingUser(user);
-    setUserForm({ name: user.name, email: user.email, role: user.role });
+    setUserForm({ name: user.name, email: user.email, role: user.role, password: '' });
     setActiveTab('manage-users');
   };
 
@@ -198,7 +261,7 @@ const AdminDashboard = () => {
     fetchUsers();
   }, []);
 
-  // Handle form input
+  // Handle form input for cars
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -434,7 +497,8 @@ const AdminDashboard = () => {
                 setUserForm({
                   name: '',
                   email: '',
-                  role: 'user'
+                  role: 'user',
+                  password: ''
                 });
               }}
             >
@@ -602,6 +666,8 @@ const UserManagementComponent = ({
   setUserForm,
   darkMode
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div className={darkMode ? 'text-white' : ''}>
       <h2>User Management</h2>
@@ -632,6 +698,36 @@ const UserManagementComponent = ({
                     className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                   />
                 </div>
+                
+                {/* Added Password Field */}
+                <div className="mb-3">
+                  <label className="form-label">
+                    {editingUser ? 'New Password (leave blank to keep current)' : 'Password'}
+                  </label>
+                  <div className="password-input-group">
+                    <input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={userForm.password}
+                      onChange={handleUserChange}
+                      className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
+                      minLength={editingUser ? undefined : 6}
+                      placeholder={editingUser ? "••••••" : ""}
+                    />
+                    <span 
+                      className="password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </div>
+                  {!editingUser && (
+                    <small className={`form-text ${darkMode ? 'text-light' : 'text-muted'}`}>
+                      Password must be at least 6 characters
+                    </small>
+                  )}
+                </div>
+                
                 <div className="mb-3">
                   <label className="form-label">Role</label>
                   <select
@@ -640,29 +736,33 @@ const UserManagementComponent = ({
                     onChange={handleUserChange}
                     className={`form-control ${darkMode ? 'bg-secondary text-white' : ''}`}
                   >
-                    <option value="client">client</option>
+                    <option value="client">Client</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <button type="submit" className="btn btn-primary">
-                  {editingUser ? 'Update User' : 'Add User'}
-                </button>
-                {editingUser && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary ms-2"
-                    onClick={() => {
-                      setEditingUser(null);
-                      setUserForm({ name: '', email: '', role: 'Client' });
-                    }}
-                  >
-                    Cancel
+                
+                <div className="d-flex gap-2">
+                  <button type="submit" className="btn btn-primary flex-grow-1">
+                    {editingUser ? 'Update User' : 'Add User'}
                   </button>
-                )}
+                  {editingUser && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => {
+                        setEditingUser(null);
+                        setUserForm({ name: '', email: '', role: 'client', password: '' });
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
           </div>
         </div>
+        
         <div className="col-md-8">
           <div className={`card ${darkMode ? 'bg-dark' : ''}`}>
             <div className="card-body">
@@ -682,8 +782,7 @@ const UserManagementComponent = ({
                         <td>{user.name}</td>
                         <td>{user.email}</td>
                         <td>
-                          <span className={`badge ${user.role === 'admin' ? 'bg-danger' : 'bg-primary'
-                            }`}>
+                          <span className={`badge ${user.role === 'admin' ? 'bg-danger' : 'bg-primary'}`}>
                             {user.role}
                           </span>
                         </td>
