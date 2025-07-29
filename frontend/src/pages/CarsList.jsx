@@ -7,9 +7,9 @@ const CarsList = () => {
   const [cars, setCars] = useState([]);
   const [filteredCars, setFilteredCars] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [selectedBrand, setSelectedBrand] = useState(''); // Added this line
-  const [selectedStatus, setSelectedStatus] = useState(''); // Added this line
-  const [loading, setLoading] = useState(true); // Added loading state
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
 
@@ -24,7 +24,6 @@ const CarsList = () => {
       setCars(res.data);
       setFilteredCars(res.data);
 
-      // Extract unique brands for filter dropdown
       const uniqueBrands = [...new Set(res.data.map(car => car.brand))];
       setBrands(uniqueBrands);
     } catch (err) {
@@ -125,6 +124,14 @@ const CarsList = () => {
                       src={car.img_url}
                       alt={`${car.brand} ${car.model}`}
                       className="car-image"
+                      onLoad={(e) => {
+                        const img = e.target;
+                        if (img.naturalWidth > img.naturalHeight) {
+                          img.classList.add('landscape');
+                        } else {
+                          img.classList.add('portrait');
+                        }
+                      }}
                     />
                   ) : (
                     <div className="car-image-placeholder">

@@ -1,9 +1,11 @@
-// src/App.jsx
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 
+// Components
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+// Pages
 import CarsList from './pages/CarsList';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -11,7 +13,8 @@ import ReservationForm from './pages/ReservationForm';
 import MyReservations from './pages/MyReservations';
 import AdminDashboard from './components/AdminDashboard';
 import HomePage from './pages/HomePage';
-import EditProfile from './pages/EditProfile'; 
+import EditProfile from './pages/EditProfile';
+// Routes
 import PrivateRoute from './routes/PrivateRoute';
 import AdminRoute from './routes/AdminRoute';
 
@@ -25,58 +28,41 @@ const App = () => {
     if (userId && userRole === 'admin') {
       navigate('/admin');
     }
-  }, []);
+  }, [navigate]);
 
   return (
-    <>
+    <div className="app-container">
       <Navbar />
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/cars" element={<CarsList />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+      <div className="content-wrapper">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/cars" element={<CarsList />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected User Routes */}
-        <Route
-          path="/reserve/:carId"
-          element={
-            <PrivateRoute>
-              <ReservationForm />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/my-reservations"
-          element={
-            <PrivateRoute>
-              <MyReservations />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <PrivateRoute>
-              <EditProfile />
-            </PrivateRoute>
-          }
-        />
+          {/* Protected User Routes */}
+          <Route path="/reserve/:carId" element={
+            <PrivateRoute><ReservationForm /></PrivateRoute>
+          } />
+          <Route path="/my-reservations" element={
+            <PrivateRoute><MyReservations /></PrivateRoute>
+          } />
+          <Route path="/profile" element={
+            <PrivateRoute><EditProfile /></PrivateRoute>
+          } />
 
-        {/* Admin-only Route */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
+          {/* Admin-only Route */}
+          <Route path="/admin" element={
+            <AdminRoute><AdminDashboard /></AdminRoute>
+          } />
 
-        {/* Fallback Route */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </>
+          {/* Fallback Route */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+      <Footer />
+    </div>
   );
 };
 

@@ -9,24 +9,20 @@ const Navbar = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get user info from localStorage
+  // User data
   const userId = localStorage.getItem('user_id');
   const role = localStorage.getItem('user_role');
   const token = localStorage.getItem('token');
 
-  const toggleNavbar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const toggleNavbar = () => setIsCollapsed(!isCollapsed);
 
   const handleLogout = () => {
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('name');
-    localStorage.removeItem('token');
+    ['user_id', 'user_role', 'name', 'token'].forEach(item => 
+      localStorage.removeItem(item)
+    );
     navigate('/login');
   };
 
-  // Fetch user name from API if logged in
   useEffect(() => {
     const fetchUserName = async () => {
       if (!userId || !token) {
@@ -34,7 +30,6 @@ const Navbar = () => {
         return;
       }
 
-      // If name exists in localStorage, use it
       const storedName = localStorage.getItem('name');
       if (storedName) {
         setName(storedName);
@@ -59,14 +54,25 @@ const Navbar = () => {
     fetchUserName();
   }, [userId, token]);
 
-  // Display loading state or fallback if name isn't loaded yet
+  useEffect(() => {
+    const handleScroll = () => {
+      document.querySelector('.navbar')?.classList.toggle(
+        'scrolled', 
+        window.scrollY > 50
+      );
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const displayName = isLoading ? 'Loading...' : name;
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary px-4">
+    <nav className="navbar navbar-expand-lg navbar-dark fixed-top">
       <div className="container-fluid">
-        <NavLink className="navbar-brand fw-bold" to="/">
-          <i className="fas fa-car me-2"></i>CarRental
+        <NavLink className="navbar-brand" to="/">
+          <i className="fas fa-car me-2"></i>Azilal Wheels
         </NavLink>
 
         <button
@@ -130,13 +136,11 @@ const Navbar = () => {
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end">
                   <li>
-                    <span className="dropdown-item-text fw-bold">
+                    <span className="dropdown-item-text">
                       <i className="fas fa-user me-2"></i>{displayName}
                     </span>
                   </li>
-                  <li>
-                    <hr className="dropdown-divider" />
-                  </li>
+                  <li><hr className="dropdown-divider" /></li>
                   <li>
                     <NavLink to="/profile" className="dropdown-item">
                       <i className="fas fa-user-edit me-2"></i>Edit Profile
