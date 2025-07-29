@@ -18,7 +18,7 @@ const HomePage = () => {
               <div className="text w-100 text-center mb-md-5 pb-md-5">
                 <h1 className="mb-4">Fast &amp; Easy Way To Rent A Car</h1>
                 <p style={{ fontSize: '18px' }}>
-                  A small river named Duden flows by their place and supplies it with the necessary regelialia.
+                  Explore the Open Road with Azilal Wheels: Your Adventure Awaits!
                 </p>
                 <a href="/cars" className="icon-wrap popup-vimeo d-flex align-items-center mt-4 justify-content-center">
                   <div className="icon d-flex align-items-center justify-content-center">
